@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="fa" x1="0" y1="0" x2="64" y2="64">
+      <stop offset="0" stop-color="#d97706"/>
+      <stop offset="1" stop-color="#92400e"/>
+    </linearGradient>
+    <linearGradient id="fb" x1="64" y1="0" x2="0" y2="64">
+      <stop offset="0" stop-color="#be185d"/>
+      <stop offset="1" stop-color="#831843"/>
+    </linearGradient>
+    <linearGradient id="fc" x1="0" y1="64" x2="64" y2="0">
+      <stop offset="0" stop-color="#0891b2"/>
+      <stop offset="1" stop-color="#155e75"/>
+    </linearGradient>
+    <linearGradient id="fd" x1="32" y1="0" x2="32" y2="64">
+      <stop offset="0" stop-color="#059669"/>
+      <stop offset="1" stop-color="#065f46"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 6 C 40 10, 44 18, 42 26 C 38 24, 34 22, 32 22 C 30 22, 26 24, 22 26 C 20 18, 24 10, 32 6 Z" fill="url(#fa)"/>
+  <path d="M58 32 C 54 40, 46 44, 38 42 C 40 38, 42 34, 42 32 C 42 30, 40 26, 38 22 C 46 20, 54 24, 58 32 Z" fill="url(#fb)"/>
+  <path d="M32 58 C 24 54, 20 46, 22 38 C 26 40, 30 42, 32 42 C 34 42, 38 40, 42 38 C 44 46, 40 54, 32 58 Z" fill="url(#fc)"/>
+  <path d="M6 32 C 10 24, 18 20, 26 22 C 24 26, 22 30, 22 32 C 22 34, 24 38, 26 42 C 18 44, 10 40, 6 32 Z" fill="url(#fd)"/>
+  <g transform="translate(32 32)">
+    <path d="M -7 5 L 0 -9 L 7 5 Z" fill="#fdf6e9" stroke="#0c1825" stroke-width="1.2" stroke-linejoin="round"/>
+    <rect x="-6" y="4.5" width="12" height="4.5" rx="0.5" fill="#0c1825"/>
+    <rect x="-4.5" y="0.5" width="9" height="1.6" rx="0.8" fill="#d97706"/>
+    <circle cx="6" cy="-7" r="1.6" fill="#be185d"/>
+  </g>
+</svg>
