@@ -128,12 +128,17 @@ export default function MyBookingsPage() {
     };
     setup();
 
+    let visTimer: ReturnType<typeof setTimeout> | null = null;
     const onVis = () => {
-      if (document.visibilityState === 'visible') setup();
+      if (visTimer) clearTimeout(visTimer);
+      visTimer = setTimeout(() => {
+        if (document.visibilityState === 'visible') setup();
+      }, 800);
     };
     document.addEventListener('visibilitychange', onVis);
 
     return () => {
+      if (visTimer) clearTimeout(visTimer);
       document.removeEventListener('visibilitychange', onVis);
       if (channel) supabase.removeChannel(channel);
     };

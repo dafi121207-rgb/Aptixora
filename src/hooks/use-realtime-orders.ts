@@ -13,6 +13,7 @@ export function useRealtimeOrders(
   const supabase = createClient();
   const callbackRef = useRef(onPayload);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     callbackRef.current = onPayload;
@@ -20,6 +21,7 @@ export function useRealtimeOrders(
 
   useEffect(() => {
     if (!businessId) return;
+    cancelledRef.current = false;
 
     const setupChannel = () => {
       if (channelRef.current) {
@@ -50,12 +52,9 @@ export function useRealtimeOrders(
           }
         )
         .subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            // Channel ready
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            // Reconnect after 1.5s on failure
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             setTimeout(() => {
-              if (businessId) setupChannel();
+              if (businessId && !cancelledRef.current) setupChannel();
             }, 1500);
           }
         });
@@ -65,15 +64,20 @@ export function useRealtimeOrders(
 
     setupChannel();
 
+    let visibilityTimer: ReturnType<typeof setTimeout> | null = null;
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && businessId) {
-        // Tab came back into focus - reconnect realtime to ensure freshness
-        setupChannel();
-      }
+      if (visibilityTimer) clearTimeout(visibilityTimer);
+      visibilityTimer = setTimeout(() => {
+        if (document.visibilityState === 'visible' && businessId && !cancelledRef.current) {
+          setupChannel();
+        }
+      }, 800);
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
+      cancelledRef.current = true;
+      if (visibilityTimer) clearTimeout(visibilityTimer);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
