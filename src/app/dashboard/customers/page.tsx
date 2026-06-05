@@ -55,7 +55,7 @@ export default function CustomersPage() {
         };
       });
 
-      summary.sort((a, b) => b.totalOrders - a.totalOrders);
+      summary.sort((a: { totalOrders: number }, b: { totalOrders: number }) => b.totalOrders - a.totalOrders);
       setCustomers(summary);
       setLoading(false);
     };

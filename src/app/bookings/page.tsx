@@ -55,45 +55,48 @@ export default function MyBookingsPage() {
   }, [user, authLoading, router]);
 
   const fetchOrders = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('client_id', user.id)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+    if (!user) { setLoading(false); return; }
+    try {
+      const { data } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('client_id', user.id)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
 
-    if (data) {
-      setOrders(data as Order[]);
-      const bizIds = [...new Set((data as Order[]).map((o) => o.business_id))];
-      if (bizIds.length > 0) {
-        const { data: bizs } = await supabase
-          .from('businesses')
-          .select('*')
-          .in('id', bizIds);
-        if (bizs) {
-          const map: Record<string, Business> = {};
-          (bizs as Business[]).forEach((b) => (map[b.id] = b));
-          setBusinesses(map);
+      if (data) {
+        setOrders(data as Order[]);
+        const bizIds = [...new Set((data as Order[]).map((o) => o.business_id))];
+        if (bizIds.length > 0) {
+          const { data: bizs } = await supabase
+            .from('businesses')
+            .select('*')
+            .in('id', bizIds);
+          if (bizs) {
+            const map: Record<string, Business> = {};
+            (bizs as Business[]).forEach((b) => (map[b.id] = b));
+            setBusinesses(map);
 
-          const svcIds = (data as Order[])
-            .map((o) => o.service_id)
-            .filter(Boolean) as string[];
-          if (svcIds.length > 0) {
-            const { data: svcs } = await supabase
-              .from('services')
-              .select('*')
-              .in('id', svcIds);
-            if (svcs) {
-              const sm: Record<string, Service> = {};
-              (svcs as Service[]).forEach((s) => (sm[s.id] = s));
-              setServices(sm);
+            const svcIds = (data as Order[])
+              .map((o) => o.service_id)
+              .filter(Boolean) as string[];
+            if (svcIds.length > 0) {
+              const { data: svcs } = await supabase
+                .from('services')
+                .select('*')
+                .in('id', svcIds);
+              if (svcs) {
+                const sm: Record<string, Service> = {};
+                (svcs as Service[]).forEach((s) => (sm[s.id] = s));
+                setServices(sm);
+              }
             }
           }
         }
       }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [user, supabase]);
 
   useEffect(() => {
@@ -103,15 +106,37 @@ export default function MyBookingsPage() {
 
   useEffect(() => {
     if (!user) return;
-    const channel = supabase
-      .channel('my-bookings')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `client_id=eq.${user.id}` },
-        () => fetchOrders()
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const setup = () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+      channel = supabase
+        .channel('my-bookings', { config: { broadcast: { self: false } } })
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `client_id=eq.${user.id}` },
+          () => fetchOrders()
+        )
+        .subscribe((status: string) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            setTimeout(setup, 1500);
+          }
+        });
+    };
+    setup();
+
+    const onVis = () => {
+      if (document.visibilityState === 'visible') setup();
+    };
+    document.addEventListener('visibilitychange', onVis);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [user, supabase, fetchOrders]);
 
   const handleDelete = async (order: Order) => {

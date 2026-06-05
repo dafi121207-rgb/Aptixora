@@ -116,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (_event: string, session: { user: { id: string } } | null) => {
         if (session?.user) {
           const profile = await fetchUser(session.user.id);
           if (profile) await fetchBusiness(profile.id);

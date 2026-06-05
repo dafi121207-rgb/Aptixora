@@ -30,12 +30,22 @@ export default function BookPage() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('businesses').select('*').limit(20);
+      let query = supabase
+        .from('businesses')
+        .select('*')
+        .order('name', { ascending: true })
+        .limit(200);
+
+      if (search.trim()) {
+        query = query.ilike('name', `%${search.trim()}%`);
+      }
+
+      const { data } = await query;
       if (data) setBusinesses(data as Business[]);
       setLoading(false);
     };
     fetch();
-  }, [supabase]);
+  }, [supabase, search]);
 
   if (loading) {
     return (

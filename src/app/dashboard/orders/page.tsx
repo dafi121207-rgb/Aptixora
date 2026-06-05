@@ -51,7 +51,25 @@ export default function OrdersPage() {
     fetchOrders();
   }, [fetchOrders]);
 
-  useRealtimeOrders(business?.id, fetchOrders);
+  useRealtimeOrders(business?.id, (action, order) => {
+    setOrders((prev) => {
+      if (action === 'INSERT') {
+        if (order.deleted_at) return prev;
+        if (isStaff && order.staff_id !== user?.id) return prev;
+        if (prev.some((o) => o.id === order.id)) return prev;
+        return [order, ...prev];
+      }
+      if (action === 'UPDATE') {
+        if (order.deleted_at) return prev.filter((o) => o.id !== order.id);
+        if (isStaff && order.staff_id !== user?.id) return prev.filter((o) => o.id !== order.id);
+        return prev.map((o) => (o.id === order.id ? order : o));
+      }
+      if (action === 'DELETE') {
+        return prev.filter((o) => o.id !== order.id);
+      }
+      return prev;
+    });
+  });
 
   const updateStatus = async (orderId: string, status: string) => {
     const { error } = await supabase
