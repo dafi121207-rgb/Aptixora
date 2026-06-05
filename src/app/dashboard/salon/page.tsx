@@ -35,54 +35,58 @@ export default function SalonDashboard() {
   const fetchData = useCallback(async () => {
     if (!business || !user) { setLoading(false); return; }
 
-    let ordersQuery = supabase
-      .from('orders')
-      .select('*')
-      .eq('business_id', business.id)
-      .gte('booking_slot', `${selectedDate}T00:00:00`);
-
-    if (isStaff) ordersQuery = ordersQuery.eq('staff_id', user.id);
-
-    const [ordersRes, servicesRes] = await Promise.all([
-      ordersQuery
-        .lt('booking_slot', `${selectedDate}T23:59:59`)
-        .order('booking_slot'),
-      supabase
-        .from('services')
-        .select('*')
-        .eq('business_id', business.id),
-    ]);
-
-    if (ordersRes.data) setOrders(ordersRes.data as Order[]);
-    if (servicesRes.data) setServices(servicesRes.data as Service[]);
-
-    const [orderStaffRes, sbStaffRes] = await Promise.all([
-      supabase
+    try {
+      let ordersQuery = supabase
         .from('orders')
-        .select('staff_id, users!staff_id(full_name, id)')
+        .select('*')
         .eq('business_id', business.id)
-        .not('staff_id', 'is', null),
-      supabase
-        .from('staff_business')
-        .select('user_id, users!user_id(full_name, id)')
-        .eq('business_id', business.id),
-    ]);
+        .gte('booking_slot', `${selectedDate}T00:00:00`);
 
-    const staffMap = new Map<string, User>();
-    orderStaffRes.data?.forEach((o: any) => {
-      if (o.users && !staffMap.has(o.users.id)) {
-        staffMap.set(o.users.id, o.users as User);
-      }
-    });
-    sbStaffRes.data?.forEach((s: any) => {
-      if (s.users && !staffMap.has(s.users.id)) {
-        staffMap.set(s.users.id, s.users as User);
-      }
-    });
-    setStaff(Array.from(staffMap.values()));
+      if (isStaff) ordersQuery = ordersQuery.eq('staff_id', user.id);
 
-    setLoading(false);
-  }, [business, selectedDate, supabase]);
+      const [ordersRes, servicesRes] = await Promise.all([
+        ordersQuery
+          .lt('booking_slot', `${selectedDate}T23:59:59`)
+          .order('booking_slot'),
+        supabase
+          .from('services')
+          .select('*')
+          .eq('business_id', business.id),
+      ]);
+
+      if (ordersRes.data) setOrders(ordersRes.data as Order[]);
+      if (servicesRes.data) setServices(servicesRes.data as Service[]);
+
+      const [orderStaffRes, sbStaffRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select('staff_id, users!staff_id(full_name, id)')
+          .eq('business_id', business.id)
+          .not('staff_id', 'is', null),
+        supabase
+          .from('staff_business')
+          .select('user_id, users!user_id(full_name, id)')
+          .eq('business_id', business.id),
+      ]);
+
+      const staffMap = new Map<string, User>();
+      orderStaffRes.data?.forEach((o: any) => {
+        if (o.users && !staffMap.has(o.users.id)) {
+          staffMap.set(o.users.id, o.users as User);
+        }
+      });
+      sbStaffRes.data?.forEach((s: any) => {
+        if (s.users && !staffMap.has(s.users.id)) {
+          staffMap.set(s.users.id, s.users as User);
+        }
+      });
+      setStaff(Array.from(staffMap.values()));
+    } catch (err) {
+      console.warn('[salon] fetchData error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [business, user, selectedDate, supabase, isStaff]);
 
   useEffect(() => {
     fetchData();

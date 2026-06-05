@@ -40,40 +40,44 @@ export default function BookBusinessPage() {
   const supabase = createClient();
 
   const fetchData = useCallback(async () => {
-    const [bizRes, svcRes] = await Promise.all([
-      supabase.from('businesses').select('*').eq('id', businessId).single(),
-      supabase.from('services').select('*').eq('business_id', businessId),
-    ]);
-
-    if (bizRes.data) setBusiness(bizRes.data as Business);
-    if (svcRes.data) setServices(svcRes.data as Service[]);
-
-    if (bizRes.data?.business_type !== 'laundry') {
-      const [orderStaffRes, sbStaffRes] = await Promise.all([
-        supabase
-          .from('orders')
-          .select('staff_id, users!staff_id(full_name, id)')
-          .eq('business_id', businessId)
-          .not('staff_id', 'is', null),
-        supabase
-          .from('staff_business')
-          .select('user_id, users!user_id(full_name, id)')
-          .eq('business_id', businessId),
+    try {
+      const [bizRes, svcRes] = await Promise.all([
+        supabase.from('businesses').select('*').eq('id', businessId).single(),
+        supabase.from('services').select('*').eq('business_id', businessId),
       ]);
 
-      const staffMap = new Map<string, User>();
-      orderStaffRes.data?.forEach((o: any) => {
-        if (o.users && !staffMap.has(o.users.id))
-          staffMap.set(o.users.id, o.users as User);
-      });
-      sbStaffRes.data?.forEach((s: any) => {
-        if (s.users && !staffMap.has(s.users.id))
-          staffMap.set(s.users.id, s.users as User);
-      });
-      setStaff(Array.from(staffMap.values()));
-    }
+      if (bizRes.data) setBusiness(bizRes.data as Business);
+      if (svcRes.data) setServices(svcRes.data as Service[]);
 
-    setLoading(false);
+      if (bizRes.data?.business_type !== 'laundry') {
+        const [orderStaffRes, sbStaffRes] = await Promise.all([
+          supabase
+            .from('orders')
+            .select('staff_id, users!staff_id(full_name, id)')
+            .eq('business_id', businessId)
+            .not('staff_id', 'is', null),
+          supabase
+            .from('staff_business')
+            .select('user_id, users!user_id(full_name, id)')
+            .eq('business_id', businessId),
+        ]);
+
+        const staffMap = new Map<string, User>();
+        orderStaffRes.data?.forEach((o: any) => {
+          if (o.users && !staffMap.has(o.users.id))
+            staffMap.set(o.users.id, o.users as User);
+        });
+        sbStaffRes.data?.forEach((s: any) => {
+          if (s.users && !staffMap.has(s.users.id))
+            staffMap.set(s.users.id, s.users as User);
+        });
+        setStaff(Array.from(staffMap.values()));
+      }
+    } catch (err) {
+      console.warn('[book] fetchData error:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [businessId, supabase, user?.full_name]);
 
   useEffect(() => {

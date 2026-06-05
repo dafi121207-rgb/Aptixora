@@ -102,15 +102,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        const profile = await fetchUser(session.user.id);
-        if (profile) await fetchBusiness(profile.id);
+    let cancelled = false;
+    const loadingTimeout = setTimeout(() => {
+      if (!cancelled) {
+        console.warn('[auth] init took >5s, forcing loading=false');
+        setLoading(false);
       }
+    }, 5000);
 
-      setLoading(false);
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (cancelled) return;
+
+        if (session?.user) {
+          try {
+            const profile = await fetchUser(session.user.id);
+            if (cancelled) return;
+            if (profile) {
+              try {
+                await fetchBusiness(profile.id);
+              } catch (bizErr) {
+                console.warn('[auth] fetchBusiness failed:', bizErr);
+              }
+            }
+          } catch (userErr) {
+            console.warn('[auth] fetchUser failed:', userErr);
+          }
+        }
+      } catch (sessionErr) {
+        console.warn('[auth] getSession failed:', sessionErr);
+      } finally {
+        if (!cancelled) {
+          clearTimeout(loadingTimeout);
+          setLoading(false);
+        }
+      }
     };
 
     init();
@@ -118,16 +146,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: string, session: { user: { id: string } } | null) => {
         if (session?.user) {
-          const profile = await fetchUser(session.user.id);
-          if (profile) await fetchBusiness(profile.id);
+          try {
+            const profile = await fetchUser(session.user.id);
+            if (cancelled) return;
+            if (profile) {
+              try {
+                await fetchBusiness(profile.id);
+              } catch (bizErr) {
+                console.warn('[auth] onAuthStateChange fetchBusiness failed:', bizErr);
+              }
+            }
+          } catch (userErr) {
+            console.warn('[auth] onAuthStateChange fetchUser failed:', userErr);
+          }
         } else {
-          setUser(null);
-          setBusiness(null);
+          if (!cancelled) {
+            setUser(null);
+            setBusiness(null);
+          }
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
   }, [supabase, fetchUser, fetchBusiness]);
 
   const signOut = useCallback(async () => {
