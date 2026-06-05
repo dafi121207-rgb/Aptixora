@@ -30,6 +30,16 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [stuckSeconds, setStuckSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!loading) { setStuckSeconds(0); return; }
+    const start = Date.now();
+    const id = setInterval(() => {
+      setStuckSeconds(Math.floor((Date.now() - start) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [loading]);
 
   useEffect(() => {
     if (loading) return;
@@ -40,12 +50,34 @@ export default function DashboardLayout({
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
   if (loading) {
+    const stuck = stuckSeconds >= 6;
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="w-80 space-y-3">
-          <div className="h-5 skeleton-pulse rounded w-3/4" />
-          <div className="h-5 skeleton-pulse rounded w-1/2" />
-          <div className="h-5 skeleton-pulse rounded w-2/3" />
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-surface)]">
+        <div className="w-80 space-y-4 text-center">
+          <div className="space-y-3">
+            <div className="h-5 skeleton-pulse rounded w-3/4 mx-auto" />
+            <div className="h-5 skeleton-pulse rounded w-1/2 mx-auto" />
+            <div className="h-5 skeleton-pulse rounded w-2/3 mx-auto" />
+          </div>
+          {stuck && (
+            <div className="space-y-2 pt-2">
+              <p className="text-xs text-[var(--color-danger)] font-semibold">
+                Koneksi lambat ({stuckSeconds}s)
+              </p>
+              <button
+                onClick={() => router.refresh()}
+                className="btn btn-primary text-xs w-full"
+              >
+                ↻ Refresh Halaman
+              </button>
+              <button
+                onClick={async () => { await signOut(); router.push('/auth/login'); }}
+                className="btn btn-secondary text-xs w-full"
+              >
+                Keluar & Masuk Ulang
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

@@ -15,7 +15,26 @@ interface Props {
 export function QueueDisplay({ business, initialOrders, initialServices }: Props) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [services] = useState<Record<string, Service>>(initialServices);
+  const [stuckSeconds, setStuckSeconds] = useState(0);
+  const [ready, setReady] = useState(false);
   const supabase = createClient();
+
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 0);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (orders.length > 0 || ready) {
+      setStuckSeconds(0);
+      return;
+    }
+    const start = Date.now();
+    const id = setInterval(() => {
+      setStuckSeconds(Math.floor((Date.now() - start) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [orders.length, ready]);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
